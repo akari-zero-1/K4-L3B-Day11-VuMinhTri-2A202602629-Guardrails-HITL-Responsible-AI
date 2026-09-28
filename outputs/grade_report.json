@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28T04:28:05.848697+00:00",
+  "generated_at": "2026-09-28T05:42:32.109373+00:00",
   "submission_dir": "C:\\Users\\Admin\\Documents\\testvscode\\K4-L3B-Day11-VuMinhTri-2A202602629-Guardrails-HITL-Responsible-AI",
   "technical_failure": false,
   "packaging": {
@@ -39,7 +39,7 @@
     "red_team": {
       "llm_provider": "groq",
       "llm_model": "openai/gpt-oss-120b",
-      "unsafe_leaks": 2,
+      "unsafe_leaks": 1,
       "unsafe_total": 5,
       "guards_leaks": 0,
       "guards_total": 5
@@ -47,7 +47,7 @@
   },
   "public_tests": {
     "returncode": 0,
-    "stdout": "..........                                                               [100%]\n10 passed in 0.82s\n",
+    "stdout": "..........                                                               [100%]\n10 passed in 2.08s\n",
     "stderr": "",
     "technical_failure": false
   },

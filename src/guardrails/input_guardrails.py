@@ -60,15 +60,40 @@ def detect_injection(user_input: str) -> InputStatus:
     normalized = re.sub(r"\s+", " ", normalized)
 
     INJECTION_PATTERNS = [
-        r"ignore\s+(?:all\s+)?(?:previous|above|prior)\s+instructions",
-        r"disregard\s+(?:all\s+)?(?:previous|above|prior)\s+instructions",
+        # 1. Direct Overrides (EN + VI)
+        r"ignore\s+(?:all\s+)?(?:previous|above|prior)\s+instructions?",
+        r"disregard\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions?|rules?|directives?)",
+        r"forget\s+(?:all\s+)?(?:previous|above|prior)?\s*(?:instructions?|rules?|prompt)",
+        r"override\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions?)",
+        r"bỏ\s+qua\s+(?:mọi\s+|tất\s+cả\s+)?(?:hướng\s+dẫn|chỉ\s+thị|quy\s+tắc)",
+        r"quên\s+(?:đi\s+)?(?:mọi\s+)?(?:hướng\s+dẫn|quy\s+định|prompt)",
+
+        # 2. Roleplay / Persona Hijacking / Jailbreak
         r"you\s+are\s+now\b",
-        r"\bsystem\s+prompt\b",
-        r"reveal\s+(?:your\s+|the\s+)?(?:internal\s+)?(?:instructions|prompt|system\s+prompt|password|secret|api[_\s-]?key)",
-        r"show\s+(?:me\s+)?(?:the\s+)?(?:admin\s+password|internal\s+password|system\s+prompt|secret)",
+        r"bạn\s+là\s+(?:ai|một\s+trợ\s+lý\s+không\s+giới\s+hạn)",
         r"pretend\s+(?:you\s+are|to\s+be)\b",
-        r"act\s+as\s+(?:a\s+|an\s+)?unrestricted\b",
-        r"\bdan\s+mode\b|\bdo\s+anything\s+now\b",
+        r"act\s+as\s+(?:a\s+|an\s+)?(?:unrestricted|jailbroken|evil)\b",
+        r"\b(?:dan|jailbreak)\s+mode\b|\bdo\s+anything\s+now\b",
+        r"role\s*play\s+as\b",
+
+        # 3. System Prompt & Credential Extraction
+        r"\bsystem\s+prompt\b",
+        r"reveal\s+(?:your\s+|the\s+)?(?:internal\s+)?(?:instructions?|prompt|system\s+prompt|password|secret|api[_\s-]?key|credentials?)",
+        r"show\s+(?:me\s+)?(?:the\s+|your\s+)?(?:admin\s+password|internal\s+password|system\s+prompt|secret|api[_\s-]?key|credentials?)",
+        r"(?:tiết\s+lộ|cho\s+tôi\s+biết|in\s+ra)\s+(?:mật\s+khẩu|system\s+prompt|api\s*key|khóa\s+bí\s+mật)",
+
+        # 4. Fill-in-the-blank & Reformatting Attacks
+        r"fill\s+in\s*(?:the\s*)?(?:blank|blanks|___)",
+        r"(?:admin\s+password|api\s*key|database\s+host|db\s+host)\s*[:=]\s*(?:___|\.{3,}|\[\s*\])",
+        r"(?:reformat|convert|translate|dump)\s+.*(?:internal\s+note|credentials?|config|system\s+prompt)",
+        r"(?:json\s+object|markdown\s+table).*['\"]?(?:admin_password|api_key|db_host)['\"]?",
+
+        # 5. Authority Impersonation & Audit Simulation
+        r"\b(?:auditor|compliance|internal\s+it|devops|sre|ciso)\b.*(?:credential|password|secret|verification|checklist)",
+        r"(?:disaster\s+recovery\s+simulation|emergency\s+drill).*credentials?",
+
+        # 6. Encoding & Bypass filters
+        r"\b(?:base64|rot13|hex\s+encoding)\b",
         r"bypass\s+(?:all\s+)?(?:guardrails|filters|safety|restrictions)",
     ]
 
