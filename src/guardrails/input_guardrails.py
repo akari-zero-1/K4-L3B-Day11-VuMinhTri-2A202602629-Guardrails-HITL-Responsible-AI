@@ -51,14 +51,29 @@ def detect_injection(user_input: str) -> InputStatus:
     Returns:
         ``"BLOCK"`` if injection detected (chặn), ``"ALLOW"`` otherwise (cho qua).
     """
+    if not user_input:
+        return "ALLOW"
+
+    # Canonicalize Unicode & invisible characters (zero-width spaces, BOM, etc.)
+    normalized = re.sub(r"[\u200B-\u200D\uFEFF\u200E\u200F\u00AD]", "", user_input)
+    # Collapse multiple whitespaces
+    normalized = re.sub(r"\s+", " ", normalized)
+
     INJECTION_PATTERNS = [
-        # TODO: Add at least 5 regex patterns
-        # Example:
-        # r"ignore (all )?(previous|above) instructions",
+        r"ignore\s+(?:all\s+)?(?:previous|above|prior)\s+instructions",
+        r"disregard\s+(?:all\s+)?(?:previous|above|prior)\s+instructions",
+        r"you\s+are\s+now\b",
+        r"\bsystem\s+prompt\b",
+        r"reveal\s+(?:your\s+|the\s+)?(?:internal\s+)?(?:instructions|prompt|system\s+prompt|password|secret|api[_\s-]?key)",
+        r"show\s+(?:me\s+)?(?:the\s+)?(?:admin\s+password|internal\s+password|system\s+prompt|secret)",
+        r"pretend\s+(?:you\s+are|to\s+be)\b",
+        r"act\s+as\s+(?:a\s+|an\s+)?unrestricted\b",
+        r"\bdan\s+mode\b|\bdo\s+anything\s+now\b",
+        r"bypass\s+(?:all\s+)?(?:guardrails|filters|safety|restrictions)",
     ]
 
     for pattern in INJECTION_PATTERNS:
-        if re.search(pattern, user_input, re.IGNORECASE):
+        if re.search(pattern, normalized, re.IGNORECASE):
             return "BLOCK"
     return "ALLOW"
 
@@ -84,14 +99,38 @@ def topic_filter(user_input: str) -> InputStatus:
         ``"BLOCK"`` = chặn (off-topic hoặc topic cấm).
         ``"ALLOW"`` = cho qua (câu banking hợp lệ).
     """
+    if not user_input:
+        return "BLOCK"
+
+    import unicodedata
+
+    def _strip_accents(t: str) -> str:
+        nfkd = unicodedata.normalize("NFKD", t)
+        return "".join(c for c in nfkd if not unicodedata.combining(c)).replace("đ", "d").replace("Đ", "D")
+
     input_lower = user_input.lower()
+    unaccented = _strip_accents(input_lower)
 
-    # TODO: Implement logic:
     # 1. If input contains any blocked topic -> return "BLOCK"
-    # 2. If input doesn't contain any allowed topic -> return "BLOCK"
-    # 3. Otherwise -> return "ALLOW"
+    for blocked in BLOCKED_TOPICS:
+        blocked_clean = _strip_accents(blocked.lower())
+        pattern = rf"\b{re.escape(blocked_clean)}\b"
+        if re.search(pattern, unaccented) or re.search(rf"\b{re.escape(blocked.lower())}\b", input_lower):
+            return "BLOCK"
 
-    pass  # Replace with your implementation
+    # 2. If input doesn't contain any allowed topic -> return "BLOCK"
+    has_allowed = False
+    for allowed in ALLOWED_TOPICS:
+        allowed_clean = _strip_accents(allowed.lower())
+        if allowed_clean in unaccented or allowed.lower() in input_lower:
+            has_allowed = True
+            break
+
+    if not has_allowed:
+        return "BLOCK"
+
+    # 3. Otherwise -> return "ALLOW"
+    return "ALLOW"
 
 
 # ============================================================
@@ -144,14 +183,19 @@ class InputGuardrailPlugin(base_plugin.BasePlugin):
         self.total_count += 1
         text = self._extract_text(user_message)
 
-        # TODO: Implement logic:
-        # 1. Call detect_injection(text)
-        #    - If "BLOCK": increment blocked_count, return self._block_response("...")
-        # 2. Call topic_filter(text)
-        #    - If "BLOCK": increment blocked_count, return self._block_response("...")
-        # 3. If both return "ALLOW": return None (let message through)
+        if detect_injection(text) == "BLOCK":
+            self.blocked_count += 1
+            return self._block_response(
+                "Yêu cầu của bạn đã bị từ chối do vi phạm chính sách bảo mật (Prompt Injection detected)."
+            )
 
-        pass  # Replace with your implementation
+        if topic_filter(text) == "BLOCK":
+            self.blocked_count += 1
+            return self._block_response(
+                "Yêu cầu của bạn đã bị từ chối do nằm ngoài phạm vi hỗ trợ của ngân hàng VinBank."
+            )
+
+        return None
 
 
 # ============================================================
